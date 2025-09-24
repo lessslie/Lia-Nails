@@ -29,6 +29,7 @@ export class AuthService {
     await this.usuarioRepository.save(usuario);
     
     const { password, ...result } = usuario;
+    console.log(password, result);
     return result;
   }
 
@@ -69,6 +70,7 @@ export class AuthService {
     }
 
     const { password, ...result } = usuario;
+    console.log(password, result);
     return result;
   }
 }

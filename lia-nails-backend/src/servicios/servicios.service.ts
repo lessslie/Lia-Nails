@@ -3,15 +3,13 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, Like, Between, FindManyOptions } from 'typeorm';
 import { plainToInstance } from 'class-transformer';
 
-import { Servicio } from '../../entities/servicio.entity';
-import { 
-  CreateServicioDto, 
-  UpdateServicioDto, 
-  ServicioResponseDto, 
-  ServicioQueryDto 
-} from './dto';
+import { Servicio } from '../entities/servicio.entity';
+import { CreateServicioDto } from './dto/create-servicio.dto';
+import { UpdateServicioDto } from './dto/update-servicio.dto';
+import { ServicioResponseDto } from './dto/servicio-response.dto';
+import { ServicioQueryDto } from './dto/servicio-query.dto';
 
-interface ServiciosPaginados {
+export interface ServiciosPaginados {
   servicios: ServicioResponseDto[];
   total: number;
   pagina: number;
@@ -60,8 +58,9 @@ export class ServiciosService {
         excludeExtraneousValues: true,
       });
     } catch (error) {
-      throw new BadRequestException(`Error al crear el servicio: ${error.message}`);
-    }
+  const errorMessage = error instanceof Error ? error.message : 'Error desconocido';
+  throw new BadRequestException(`Error al crear el servicio: ${errorMessage}`);
+}
   }
 
   /**
@@ -153,16 +152,22 @@ export class ServiciosService {
         limite: limiteActual,
         total_paginas: totalPaginas,
       };
-    } catch (error) {
-      throw new BadRequestException(`Error al buscar servicios: ${error.message}`);
+    } catch (error:unknown) {
+      throw new BadRequestException(
+        `Error al buscar servicios: ${
+          error && typeof error === 'object' && error !== null && 'message' in error && typeof (error as { message?: unknown }).message === 'string'
+            ? (error as { message: string }).message
+            : String(error)
+        }`
+      );
     }
   }
 
   /**
    * Buscar un servicio por ID
    */
-  async buscarPorId(id: number): Promise<ServicioResponseDto> {
-    if (!id || id <= 0) {
+  async buscarPorId(id: string): Promise<ServicioResponseDto> {
+    if (!id || id.trim() === '') {
       throw new BadRequestException('ID de servicio inválido');
     }
 
@@ -182,7 +187,7 @@ export class ServiciosService {
   /**
    * Actualizar un servicio
    */
-  async actualizar(id: number, updateServicioDto: UpdateServicioDto): Promise<ServicioResponseDto> {
+  async actualizar(id: string, updateServicioDto: UpdateServicioDto): Promise<ServicioResponseDto> {
     // Buscar el servicio existente
     const servicioExistente = await this.servicioRepository.findOne({
       where: { id },
@@ -239,14 +244,15 @@ export class ServiciosService {
         excludeExtraneousValues: true,
       });
     } catch (error) {
-      throw new BadRequestException(`Error al actualizar el servicio: ${error.message}`);
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      throw new BadRequestException(`Error al actualizar el servicio: ${errorMessage}`);
     }
   }
 
   /**
    * Eliminar un servicio (soft delete)
    */
-  async eliminar(id: number): Promise<{ mensaje: string }> {
+  async eliminar(id: string): Promise<{ mensaje: string }> {
     const servicio = await this.servicioRepository.findOne({
       where: { id },
     });
@@ -263,7 +269,7 @@ export class ServiciosService {
         mensaje: `Servicio "${servicio.nombre}" desactivado correctamente`,
       };
     } catch (error) {
-      throw new BadRequestException(`Error al eliminar el servicio: ${error.message}`);
+      throw new BadRequestException(`Error al eliminar el servicio: ${error && typeof error === 'object' && 'message' in error ? (error as { message: string }).message : String(error)}`);
     }
   }
 

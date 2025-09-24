@@ -1,40 +1,37 @@
-import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn} from 'typeorm';
-
+import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn } from 'typeorm';
 
 @Entity('servicios')
 export class Servicio {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
-  @Column()
+  @Column({ type: 'varchar', length: 100 })
   nombre: string;
 
   @Column({
     type: 'enum',
-    enum: ['uñas', 'pies', 'pestañas'],
+    enum: ['manicura', 'pedicura', 'nail_art', 'tratamientos', 'kapping', 'otros'],
   })
-  categoria: 'uñas' | 'pies' | 'pestañas';
+  categoria: 'manicura' | 'pedicura' | 'nail_art' | 'tratamientos' | 'kapping' | 'otros';
 
-  @Column({ nullable: true })
-  subtipo?: string; // Para uñas: 'esmalte-tradicional', 'semipermanente', etc.
-
-  @Column()
-  duracionDefault: number; // minutos
+  @Column({ type: 'int' })
+  duracion_minutos: number;
 
   @Column({ type: 'decimal', precision: 10, scale: 2 })
   precio: number;
 
-  @Column('text', { nullable: true })
+  @Column({ type: 'text', nullable: true })
   descripcion?: string;
 
-  @Column({ default: true })
+  @Column({ type: 'boolean', default: true })
   activo: boolean;
 
+  @Column({ type: 'int', nullable: true })
+  orden?: number;
 
+  @CreateDateColumn({ name: 'creado_en' })
+  creado_en: Date;
 
-  @CreateDateColumn()
-  createdAt: Date;
-
-  @UpdateDateColumn()
-  updatedAt: Date;
+  @UpdateDateColumn({ name: 'actualizado_en' })
+  actualizado_en: Date;
 }

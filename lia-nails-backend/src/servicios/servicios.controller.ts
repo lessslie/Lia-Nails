@@ -7,7 +7,6 @@ import {
   Param,
   Delete,
   Query,
-  ParseIntPipe,
   HttpStatus,
   UseGuards,
   ValidationPipe,
@@ -22,14 +21,12 @@ import {
   ApiBody,
 } from '@nestjs/swagger';
 
-import { ServiciosService } from './servicios.service';
+import { ServiciosService, ServiciosPaginados } from './servicios.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
-import {
-  CreateServicioDto,
-  UpdateServicioDto,
-  ServicioResponseDto,
-  ServicioQueryDto,
-} from './dto';
+import { CreateServicioDto } from './dto/create-servicio.dto';
+import { UpdateServicioDto } from './dto/update-servicio.dto';
+import { ServicioResponseDto } from './dto/servicio-response.dto';
+import { ServicioQueryDto } from './dto/servicio-query.dto';
 
 @ApiTags('Servicios')
 @Controller('servicios')
@@ -39,40 +36,13 @@ export class ServiciosController {
   @Post()
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
-  @ApiOperation({ 
+  @ApiOperation({
     summary: 'Crear nuevo servicio',
     description: 'Crea un nuevo servicio en el sistema. Requiere autenticación JWT.',
   })
   @ApiBody({
     type: CreateServicioDto,
-    description: 'Datos del nuevo servicio',
-    examples: {
-      manicura: {
-        summary: 'Ejemplo Manicura',
-        value: {
-          nombre: 'Manicura Completa',
-          descripcion: 'Manicura completa con esmaltado, incluye limado, cutícula y masaje',
-          precio: 15000,
-          duracion_minutos: 90,
-          categoria: 'manicura',
-          imagen_url: 'https://example.com/manicura.jpg',
-          activo: true,
-          orden: 1,
-        },
-      },
-      pedicura: {
-        summary: 'Ejemplo Pedicura',
-        value: {
-          nombre: 'Pedicura Spa',
-          descripcion: 'Pedicura completa con exfoliación y masaje relajante',
-          precio: 18000,
-          duracion_minutos: 120,
-          categoria: 'pedicura',
-          activo: true,
-          orden: 2,
-        },
-      },
-    },
+    description: 'Datos del servicio a crear',
   })
   @ApiResponse({
     status: HttpStatus.CREATED,
@@ -81,25 +51,7 @@ export class ServiciosController {
   })
   @ApiResponse({
     status: HttpStatus.BAD_REQUEST,
-    description: 'Datos inválidos o error de validación',
-    schema: {
-      example: {
-        statusCode: 400,
-        message: ['El nombre debe tener entre 2 y 100 caracteres'],
-        error: 'Bad Request',
-      },
-    },
-  })
-  @ApiResponse({
-    status: HttpStatus.CONFLICT,
-    description: 'Ya existe un servicio con el mismo nombre',
-    schema: {
-      example: {
-        statusCode: 409,
-        message: 'Ya existe un servicio con el nombre "Manicura Completa"',
-        error: 'Conflict',
-      },
-    },
+    description: 'Datos inválidos o servicio ya existente',
   })
   @ApiResponse({
     status: HttpStatus.UNAUTHORIZED,
@@ -114,113 +66,28 @@ export class ServiciosController {
 
   @Get()
   @ApiOperation({
-    summary: 'Listar todos los servicios',
+    summary: 'Listar servicios',
     description: 'Obtiene una lista paginada de servicios con filtros opcionales.',
   })
-  @ApiQuery({
-    name: 'buscar',
-    required: false,
-    description: 'Buscar por nombre del servicio',
-    example: 'manicura',
-  })
-  @ApiQuery({
-    name: 'categoria',
-    required: false,
-    description: 'Filtrar por categoría',
-    enum: ['manicura', 'pedicura', 'nail_art', 'tratamientos', 'kapping', 'otros'],
-  })
-  @ApiQuery({
-    name: 'activo',
-    required: false,
-    description: 'Filtrar por estado activo',
-    type: Boolean,
-  })
-  @ApiQuery({
-    name: 'precio_min',
-    required: false,
-    description: 'Precio mínimo',
-    type: Number,
-  })
-  @ApiQuery({
-    name: 'precio_max',
-    required: false,
-    description: 'Precio máximo',
-    type: Number,
-  })
-  @ApiQuery({
-    name: 'duracion_min',
-    required: false,
-    description: 'Duración mínima en minutos',
-    type: Number,
-  })
-  @ApiQuery({
-    name: 'duracion_max',
-    required: false,
-    description: 'Duración máxima en minutos',
-    type: Number,
-  })
-  @ApiQuery({
-    name: 'ordenar_por',
-    required: false,
-    description: 'Campo por el cual ordenar',
-    enum: ['nombre', 'precio', 'duracion_minutos', 'categoria', 'orden', 'creado_en'],
-  })
-  @ApiQuery({
-    name: 'direccion',
-    required: false,
-    description: 'Dirección del ordenamiento',
-    enum: ['ASC', 'DESC'],
-  })
-  @ApiQuery({
-    name: 'pagina',
-    required: false,
-    description: 'Número de página',
-    type: Number,
-  })
-  @ApiQuery({
-    name: 'limite',
-    required: false,
-    description: 'Cantidad de elementos por página',
-    type: Number,
-  })
+  @ApiQuery({ name: 'buscar', required: false, description: 'Buscar por nombre del servicio' })
+  @ApiQuery({ name: 'categoria', required: false, enum: ['manicura', 'pedicura', 'nail_art', 'tratamientos', 'kapping', 'otros'] })
+  @ApiQuery({ name: 'activo', required: false, type: Boolean })
+  @ApiQuery({ name: 'precio_min', required: false, type: Number })
+  @ApiQuery({ name: 'precio_max', required: false, type: Number })
+  @ApiQuery({ name: 'duracion_min', required: false, type: Number })
+  @ApiQuery({ name: 'duracion_max', required: false, type: Number })
+  @ApiQuery({ name: 'ordenar_por', required: false, enum: ['nombre', 'precio', 'duracion_minutos', 'categoria', 'orden', 'creado_en'] })
+  @ApiQuery({ name: 'direccion', required: false, enum: ['ASC', 'DESC'] })
+  @ApiQuery({ name: 'pagina', required: false, type: Number })
+  @ApiQuery({ name: 'limite', required: false, type: Number })
   @ApiResponse({
     status: HttpStatus.OK,
     description: 'Lista de servicios obtenida exitosamente',
-    schema: {
-      example: {
-        servicios: [
-          {
-            id: 1,
-            nombre: 'Manicura Completa',
-            descripcion: 'Manicura completa con esmaltado',
-            precio: 15000,
-            precio_formateado: '$15.000',
-            duracion_minutos: 90,
-            duracion_formateada: '1h 30min',
-            categoria: 'manicura',
-            categoria_nombre: 'Manicura',
-            activo: true,
-            estado_texto: 'Activo',
-            orden: 1,
-            creado_en: '2024-01-15T10:30:00Z',
-            actualizado_en: '2024-01-15T15:45:00Z',
-          },
-        ],
-        total: 15,
-        pagina: 1,
-        limite: 10,
-        total_paginas: 2,
-      },
-    },
-  })
-  @ApiResponse({
-    status: HttpStatus.BAD_REQUEST,
-    description: 'Parámetros de consulta inválidos',
   })
   async buscarTodos(
     @Query(new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true }))
     query: ServicioQueryDto,
-  ) {
+  ): Promise<ServiciosPaginados> {
     return await this.serviciosService.buscarTodos(query);
   }
 
@@ -232,8 +99,7 @@ export class ServiciosController {
   @ApiParam({
     name: 'id',
     description: 'ID único del servicio',
-    type: Number,
-    example: 1,
+    example: '550e8400-e29b-41d4-a716-446655440000',
   })
   @ApiResponse({
     status: HttpStatus.OK,
@@ -243,28 +109,8 @@ export class ServiciosController {
   @ApiResponse({
     status: HttpStatus.NOT_FOUND,
     description: 'Servicio no encontrado',
-    schema: {
-      example: {
-        statusCode: 404,
-        message: 'Servicio con ID 999 no encontrado',
-        error: 'Not Found',
-      },
-    },
   })
-  @ApiResponse({
-    status: HttpStatus.BAD_REQUEST,
-    description: 'ID inválido',
-    schema: {
-      example: {
-        statusCode: 400,
-        message: 'ID de servicio inválido',
-        error: 'Bad Request',
-      },
-    },
-  })
-  async buscarPorId(
-    @Param('id', ParseIntPipe) id: number,
-  ): Promise<ServicioResponseDto> {
+  async buscarPorId(@Param('id') id: string): Promise<ServicioResponseDto> {
     return await this.serviciosService.buscarPorId(id);
   }
 
@@ -277,31 +123,12 @@ export class ServiciosController {
   })
   @ApiParam({
     name: 'id',
-    description: 'ID único del servicio a actualizar',
-    type: Number,
-    example: 1,
+    description: 'ID único del servicio',
+    example: '550e8400-e29b-41d4-a716-446655440000',
   })
   @ApiBody({
     type: UpdateServicioDto,
     description: 'Datos a actualizar del servicio',
-    examples: {
-      precio: {
-        summary: 'Actualizar solo precio',
-        value: {
-          precio: 16000,
-        },
-      },
-      completo: {
-        summary: 'Actualización completa',
-        value: {
-          nombre: 'Manicura Premium',
-          descripcion: 'Manicura completa premium con tratamiento especial',
-          precio: 20000,
-          duracion_minutos: 105,
-          activo: true,
-        },
-      },
-    },
   })
   @ApiResponse({
     status: HttpStatus.OK,
@@ -313,10 +140,6 @@ export class ServiciosController {
     description: 'Servicio no encontrado',
   })
   @ApiResponse({
-    status: HttpStatus.CONFLICT,
-    description: 'Ya existe otro servicio con el mismo nombre',
-  })
-  @ApiResponse({
     status: HttpStatus.BAD_REQUEST,
     description: 'Datos inválidos',
   })
@@ -325,7 +148,7 @@ export class ServiciosController {
     description: 'Token JWT inválido o faltante',
   })
   async actualizar(
-    @Param('id', ParseIntPipe) id: number,
+    @Param('id') id: string,
     @Body(new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true }))
     updateServicioDto: UpdateServicioDto,
   ): Promise<ServicioResponseDto> {
@@ -336,23 +159,17 @@ export class ServiciosController {
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
   @ApiOperation({
-    summary: 'Eliminar servicio',
-    description: 'Desactiva un servicio (soft delete). El servicio no se elimina físicamente sino que se marca como inactivo. Requiere autenticación JWT.',
+    summary: 'Desactivar servicio',
+    description: 'Desactiva un servicio (soft delete). Requiere autenticación JWT.',
   })
   @ApiParam({
     name: 'id',
-    description: 'ID único del servicio a eliminar',
-    type: Number,
-    example: 1,
+    description: 'ID único del servicio',
+    example: '550e8400-e29b-41d4-a716-446655440000',
   })
   @ApiResponse({
     status: HttpStatus.OK,
     description: 'Servicio desactivado exitosamente',
-    schema: {
-      example: {
-        mensaje: 'Servicio "Manicura Completa" desactivado correctamente',
-      },
-    },
   })
   @ApiResponse({
     status: HttpStatus.NOT_FOUND,
@@ -362,7 +179,7 @@ export class ServiciosController {
     status: HttpStatus.UNAUTHORIZED,
     description: 'Token JWT inválido o faltante',
   })
-  async eliminar(@Param('id', ParseIntPipe) id: number): Promise<{ mensaje: string }> {
+  async eliminar(@Param('id') id: string): Promise<{ mensaje: string }> {
     return await this.serviciosService.eliminar(id);
   }
 
@@ -375,21 +192,20 @@ export class ServiciosController {
     name: 'categoria',
     description: 'Categoría de servicios',
     enum: ['manicura', 'pedicura', 'nail_art', 'tratamientos', 'kapping', 'otros'],
-    example: 'manicura',
   })
   @ApiResponse({
     status: HttpStatus.OK,
     description: 'Servicios de la categoría obtenidos exitosamente',
   })
   async buscarPorCategoria(
-    @Param('categoria') categoria: string,
-  ) {
+    @Param('categoria') categoria: 'manicura' | 'pedicura' | 'nail_art' | 'tratamientos' | 'kapping' | 'otros',
+  ): Promise<ServiciosPaginados> {
     const query: ServicioQueryDto = {
-      categoria,
+      categoria: categoria,
       activo: true,
       ordenar_por: 'orden',
       direccion: 'ASC',
-      limite: 100, // Traer todos los servicios de la categoría
+      limite: 100,
     };
     
     return await this.serviciosService.buscarTodos(query);

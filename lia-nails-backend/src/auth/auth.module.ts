@@ -14,7 +14,7 @@ import { Usuario } from '../entities/usuario.entity';
     PassportModule,
     JwtModule.registerAsync({
       imports: [ConfigModule],
-      useFactory: async (configService: ConfigService) => ({
+      useFactory: (configService: ConfigService) => ({
         secret: configService.get<string>('JWT_SECRET') || 'fallback-secret',
         signOptions: { 
           expiresIn: configService.get<string>('JWT_EXPIRES_IN') || '7d' 
