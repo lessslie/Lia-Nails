@@ -3,8 +3,8 @@ import { AuthUser } from '../interfaces/auth-user.interface';
 
 export const GetUser = createParamDecorator(
   (data: keyof AuthUser | undefined, ctx: ExecutionContext): AuthUser | AuthUser[keyof AuthUser] => {
-    const request = ctx.switchToHttp().getRequest();
-    const user = request.user as AuthUser;
+    const request = ctx.switchToHttp().getRequest<{ user: AuthUser }>();
+    const user = request.user;
 
     // Si se especifica una propiedad específica, devolverla
     if (data) {

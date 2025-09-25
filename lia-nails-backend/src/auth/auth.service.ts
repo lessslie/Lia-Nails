@@ -119,7 +119,9 @@ export class AuthService {
     }
 
     // Devolver usuario sin contraseña
-    const { password: _, ...userWithoutPassword } = usuario;
+    const { password: _ , ...userWithoutPassword } = usuario;
+
+    console.log(_)
     return userWithoutPassword;
   }
 }
